@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres:12
+    environment:
+      - POSTGRES_PASSWORD=postgres
+
+  loadbalancer:
+    image: "traefik:v2.9"
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "8080:80"
+      - "9090:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+#  app-web:
+#    image: dianamed/app-web:latest
+#    depends_on:
+#      - loadbalancer
+#    ports:
+#      - ":8888:4567"
+
+  app-books:
+    image: dianamed/app-book:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app-book.rule=PathPrefix(`/book`)"
+      - "traefik.http.routers.app-book.entrypoints=web"
+    depends_on:
+      - postgres
+    environment:
+      - DB_URL=jdbc:postgresql://postgres:5432/postgres
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+    expose:
+      - 7001
+
+#  app-authors:
+#    image: dianamed/app-author:latest
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.app-author.rule=PathPrefix(`/author`)"
+#      - "traefik.http.routers.app-author.entrypoints=web"
+#    depends_on:
+#      - postgres
+#    environment:
+#      - DB_URL=jdbc:postgresql://postgres:5432/postgres
+#      - DB_USERNAME=postgres
+#      - DB_PASSWORD=postgres
+#    expose:
+#      - 4545
